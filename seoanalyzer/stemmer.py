@@ -9,6 +9,7 @@ In my quick tests, this implementation about 3.5 times faster than the
 seriously weird Python linked from the official page.
 """
 
+
 import re
 
 # Suffix replacement lists
@@ -54,15 +55,17 @@ _cons_seq = "[^aeiouy]+"
 _vowel_seq = "[aeiou]+"
 
 # m > 0
-_mgr0 = re.compile("^(" + _cons_seq + ")?" + _vowel_seq + _cons_seq)
+_mgr0 = re.compile(f"^({_cons_seq})?{_vowel_seq}{_cons_seq}")
 # m == 0
-_meq1 = re.compile("^(" + _cons_seq + ")?" + _vowel_seq + _cons_seq + "(" + _vowel_seq + ")?$")
+_meq1 = re.compile(f"^({_cons_seq})?{_vowel_seq}{_cons_seq}({_vowel_seq})?$")
 # m > 1
-_mgr1 = re.compile("^(" + _cons_seq + ")?" + _vowel_seq + _cons_seq + _vowel_seq + _cons_seq)
+_mgr1 = re.compile(
+    f"^({_cons_seq})?{_vowel_seq}{_cons_seq}{_vowel_seq}{_cons_seq}"
+)
 # vowel in stem
-_s_v = re.compile("^(" + _cons_seq + ")?" + _vowel)
+_s_v = re.compile(f"^({_cons_seq})?{_vowel}")
 # ???
-_c_v = re.compile("^" + _cons_seq + _vowel + "[^aeiouwxy]$")
+_c_v = re.compile(f"^{_cons_seq}{_vowel}[^aeiouwxy]$")
 
 # Patterns used in the rules
 
@@ -86,11 +89,11 @@ def stem(w):
     """
     
     if len(w) < 3: return w
-    
+
     first_is_y = w[0] == "y"
     if first_is_y:
-        w = "Y" + w[1:]
-        
+        w = f"Y{w[1:]}"
+
     # Step 1a
     if w.endswith("s"):
         if w.endswith("sses"):
@@ -99,77 +102,61 @@ def stem(w):
             w = w[:-2]
         elif w[-2] != "s":
             w = w[:-1]
-    
+
     # Step 1b
-    
+
     if w.endswith("eed"):
         s = w[:-3]
         if _mgr0.match(s):
             w = w[:-1]
-    else:
-        m = _ed_ing.match(w)
-        if m:
-            stem = m.group(1)
-            if _s_v.match(stem):
-                w = stem
-                if _at_bl_iz.match(w):
-                    w += "e"
-                elif _step1b.match(w):
-                    w = w[:-1]
-                elif _c_v.match(w):
-                    w += "e"
-            
+    elif m := _ed_ing.match(w):
+        stem = m.group(1)
+        if _s_v.match(stem):
+            w = stem
+            if _at_bl_iz.match(w):
+                w += "e"
+            elif _step1b.match(w):
+                w = w[:-1]
+            elif _c_v.match(w):
+                w += "e"
+
     # Step 1c
-    
+
     if w.endswith("y"):
         stem = w[:-1]
         if _s_v.match(stem):
-            w = stem + "i"
-            
-    # Step 2
-    
-    m = _step2.match(w)
-    if m:
+            w = f"{stem}i"
+
+    if m := _step2.match(w):
         stem = m.group(1)
         suffix = m.group(2)
         if _mgr0.match(stem):
             w = stem + _step2list[suffix]
-            
-    # Step 3
-    
-    m = _step3.match(w)
-    if m:
+
+    if m := _step3.match(w):
         stem = m.group(1)
         suffix = m.group(2)
         if _mgr0.match(stem):
             w = stem + _step3list[suffix]
 
-    # Step 4
-    
-    m = _step4_1.match(w)
-    if m:
+    if m := _step4_1.match(w):
         stem = m.group(1)
         if _mgr1.match(stem):
             w = stem
-    else:
-        m = _step4_2.match(w)
-        if m:
-            stem = m.group(1) + m.group(2)
-            if _mgr1.match(stem):
-                w = stem
-    
-    # Step 5
-    
-    m = _step5.match(w)
-    if m:
+    elif m := _step4_2.match(w):
+        stem = m.group(1) + m.group(2)
+        if _mgr1.match(stem):
+            w = stem
+
+    if m := _step5.match(w):
         stem = m.group(1)
         if _mgr1.match(stem) or (_meq1.match(stem) and not _c_v.match(stem)):
             w = stem
-    
+
     if w.endswith("ll") and _mgr1.match(w):
         w = w[:-1]
-    
+
     if first_is_y:
-        w = "y" + w[1:]
+        w = f"y{w[1:]}"
 
     return w

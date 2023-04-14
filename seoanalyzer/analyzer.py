@@ -131,9 +131,11 @@ class Manifest(object):
                 #TODO: Find an elegant way to run type & content checks on `param`.
                 cls.session.__dict__[param_name] = param
             except AssertionError as err:
-                print("You've passed in {} as param to modify your requests session.".format(param_name))
-                print("Options are: {}".format(requests.Session.__attrs__))
-                print("Bypassing {}...".format(param_name) + os.linesep)
+                print(
+                    f"You've passed in {param_name} as param to modify your requests session."
+                )
+                print(f"Options are: {requests.Session.__attrs__}")
+                print(f"Bypassing {param_name}...{os.linesep}")
                 # explicit garbage collection. This is implied but whateva.
                 del session_param_dict[param_name]
                 continue
@@ -258,7 +260,7 @@ class Page(object):
                 self.warn(u'Can not read {0}'.format(encoding))
                 return
         else:
-            raw_html = u'{}'.format(page.text)
+            raw_html = f'{page.text}'
 
         # remove comments, they screw with BeautifulSoup
         clean_html = re.sub(r'<!--.*?-->', r'', raw_html, flags=re.DOTALL)
@@ -328,11 +330,7 @@ class Page(object):
         return zip(*[D[i:] for i in range(n)])
 
     def process_text(self, vt):
-        page_text = ''
-
-        for element in vt:
-            page_text += element.lower() + u' '
-
+        page_text = ''.join(f'{element.lower()} ' for element in vt)
         tokens = self.tokenize(page_text)
         raw_tokens = self.raw_tokenize(page_text)
 
@@ -437,10 +435,7 @@ class Page(object):
         Manifest.page_descriptions.append(d)
 
     def visible_tags(self, element):
-        if element.parent.name in ['style', 'script', '[document]']:
-            return False
-
-        return True
+        return element.parent.name not in ['style', 'script', '[document]']
 
     def analyze_img_tags(self, bs):
         """
@@ -524,10 +519,7 @@ def getText(nodelist):
     """
     Stolen from the minidom documentation
     """
-    rc = []
-    for node in nodelist:
-        if node.nodeType == node.TEXT_NODE:
-            rc.append(node.data)
+    rc = [node.data for node in nodelist if node.nodeType == node.TEXT_NODE]
     return ''.join(rc)
 
 
@@ -596,9 +588,8 @@ def analyze(site, sitemap=None, verbose=False, **session_params):
         if page.strip().lower() in crawled:
             continue
 
-        if '#' in page:
-            if page[:page.index('#')].strip().lower() in crawled:
-                continue
+        if '#' in page and page[: page.index('#')].strip().lower() in crawled:
+            continue
 
         if do_ignore(page) == True:
             continue
